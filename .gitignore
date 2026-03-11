@@ -1,0 +1,10 @@
+data/
+
+__pycache__/
+project/
+tf_env/
+
+.DS_Store
+Thumbs.db
+
+Figure*
