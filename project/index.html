@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Typing Study</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-size: 16px;
+    }
+    #source {
+      padding: 10px;
+      background: #f0f0f0;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+    #citation {
+      font-size: 0.9em; 
+      color: #555; 
+      margin-bottom: 10px
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<h2 id="title">Consent</h2>
+
+<div id="consent">
+  <p>
+    This study records anonymized keystroke timing data while you type.
+    No identifying information is collected.
+    Participation takes under 3 minutes.
+  </p>
+  <button onclick="startExperiment()">I Consent</button>
+</div>
+
+<div id="task" class="hidden">
+  <div id="source" class="hidden"></div>
+  <div id="citation" class="hidden"></div>
+  <p id="instructions"></p>
+
+  <textarea id="input"
+    spellcheck="false"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+  ></textarea>
+
+  <div>
+    <span id="wordCount">0</span> words (target ~50, max 75)
+  </div>
+  <div id="warning" style="color: red; margin-top: 8px;"></div>
+  <button id="taskButton" onclick="submitTask()">Continue</button>
+</div>
+
+<div id="done" class="hidden">
+  <h2>Done</h2>
+  <p>Thank you for participating.</p>
+</div>
+
+<script>
+/* ---------- MOBILE BLOCK ---------- */
+if ("ontouchstart" in window) {
+  document.body.innerHTML =
+    "<p>This experiment must be completed on a desktop or laptop.</p>";
+}
+
+/* ---------- SESSION STATE ---------- */
+function makeUUID() {
+  if (crypto && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback RFC4122-ish UUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+const session = {
+  participant_id: makeUUID(),
+  order: null,
+  tasks: []
+};
+
+let currentTaskIndex = 0;
+let currentKeystrokes = [];
+let taskStartTime = null;
+
+/* ---------- PLACEHOLDERS ---------- */
+const SOURCE_TEXTS = [
+  {
+    id: "src_01",
+    text: "Tower 333 is a 20-story high-rise office building in the central business district of Bellevue, Washington, United States. The building housed the corporate office of Expedia, Inc. from 2008 to 2019. Amazon is planned to take over the lease for the entire building in 2020.",
+    cite: "Source: https://en.wikipedia.org/wiki/Tower_333"
+  },
+  {
+    id: "src_02",
+    text: "Shopper's World is an open-air shopping center in Framingham, Massachusetts. The original facility (spelled Shoppers' World) is of historical significance as one of the first suburban shopping malls in the United States upon opening in 1951; though it had a central courtyard and covered walkways, it was not fully indoor.",
+    cite: "Source: https://en.wikipedia.org/wiki/Shopper%27s_World"
+  },
+  {
+    id: "src_03",
+    text: "The National Museum of Galle (Galle National Museum) is one of the national museums of Sri Lanka. It is located in the oldest remaining Dutch building in the Galle fort, Galle, a single storey colonnaded Dutch building built in 1656 as the commissariat store for the Dutch garrison at the fort.",
+    cite: "Source: https://en.wikipedia.org/wiki/National_Museum_of_Galle"
+  },
+  {
+    id: "src_04",
+    text: "The 1954 Atlantic hurricane season was an above-average Atlantic hurricane season in terms of named storms, with 16 forming. Overall, the season resulted in $751.6 million in damage, the most of any season at the time. The season officially began on June 15, and nine days later the first named storm developed.",
+    cite: "Source: https://en.wikipedia.org/wiki/1954_Atlantic_hurricane_season"
+  },
+  {
+    id: "src_05",
+    text: "The men's singles was a tennis event held as part of the tennis program at the 1904 Summer Olympics. It was the third time the event was held at the Olympics. There were 27 competitors from 2 nations. The event was won by Beals Wright, with the Americans sweeping the medals.",
+    cite: "Source: https://en.wikipedia.org/wiki/Tennis_at_the_1904_Summer_Olympics_%E2%80%93_Men%27s_singles"
+  }
+];
+
+const PROMPTS = [
+  "Describe a recent experience, your favorite food, or something made up. The subject matter is entirely up to you. Write as you would when writing an email or assignment. Please do not write text you have memorized or write frequently. Please write your response in English."
+];
+
+/* ---------- START ---------- */
+function startExperiment() {
+  session.order = Math.random() < 0.5
+    ? ["transcription", "natural"]
+    : ["natural", "transcription"];
+
+  document.getElementById("consent").classList.add("hidden");
+  document.getElementById("task").classList.remove("hidden");
+
+  runNextTask();
+}
+
+
+let currentSourceText = null;
+
+/* ---------- TASK RUNNER ---------- */
+function runNextTask() {
+  const taskType = session.order[currentTaskIndex];
+  const textarea = document.getElementById("input");
+  const sourceDiv = document.getElementById("source");
+  const citationDiv = document.getElementById("citation");
+  const button = document.getElementById("taskButton");
+
+  document.getElementById("wordCount").innerText = 0;
+
+  textarea.value = "";
+  textarea.focus();
+  currentKeystrokes = [];
+  taskStartTime = performance.now();
+
+  if (taskType === "transcription") {
+    document.getElementById("title").innerText = "Transcription Task";
+    sourceDiv.classList.remove("hidden");
+    citationDiv.classList.remove("hidden");
+
+    currentSourceText =
+      SOURCE_TEXTS[Math.floor(Math.random() * SOURCE_TEXTS.length)];
+
+    sourceDiv.innerText = currentSourceText.text;
+    citationDiv.innerText = currentSourceText.cite;
+
+    document.getElementById("instructions").innerText =
+      "Please transcribe the text above exactly as written.";
+  } else {
+    currentSourceText = null;
+    sourceDiv.classList.add("hidden");
+    citationDiv.classList.add("hidden");
+
+    document.getElementById("title").innerText = "Writing Task";
+    document.getElementById("instructions").innerText = PROMPTS[0];
+  }
+  button.innerText =
+  currentTaskIndex === session.order.length - 1
+    ? "Submit"
+    : "Continue";
+}
+
+
+/* ---------- KEYSTROKE LOGGING ---------- */
+const textarea = document.getElementById("input");
+
+function logEvent(e, type) {
+  currentKeystrokes.push({
+    type,
+    key: e.key,
+    code: e.code,
+    t: performance.now(),
+    cursor: textarea.selectionStart,
+    text_length: textarea.value.length,
+    shift: e.shiftKey
+  });
+}
+
+
+textarea.addEventListener("keydown", e => logEvent(e, "keydown"));
+textarea.addEventListener("keyup", e => logEvent(e, "keyup"));
+
+textarea.addEventListener("paste", e => e.preventDefault());
+textarea.addEventListener("drop", e => e.preventDefault());
+textarea.addEventListener("contextmenu", e => e.preventDefault());
+
+/* ---------- WORD COUNT ---------- */
+textarea.addEventListener("input", () => {
+  const words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0);
+  document.getElementById("wordCount").innerText = words.length;
+  document.getElementById("warning").innerText = "";
+
+  if (words.length >= 75) {
+    textarea.value = words.slice(0, 75).join(" ");
+  }
+});
+
+/* ---------- SUBMIT TASK ---------- */
+function submitTask() {
+    const taskType = session.order[currentTaskIndex];
+    const words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0);
+
+
+    if (words.length < 30) {
+      document.getElementById("warning").innerText =
+      "Please write at least 30 words before continuing.";
+      return;
+    }
+
+    session.tasks.push({
+        type: taskType,
+        source_text_id:
+        taskType === "transcription" ? currentSourceText.id : null,
+        keystrokes: currentKeystrokes,
+        final_text: textarea.value,
+        duration_ms: performance.now() - taskStartTime
+    });
+
+
+    currentTaskIndex++;
+    
+
+    if (currentTaskIndex < session.order.length) {
+        runNextTask();
+    } else {
+        finishExperiment();
+    }
+}
+
+/* ---------- FINISH ---------- */
+function finishExperiment() {
+  document.getElementById("task").classList.add("hidden");
+  document.getElementById("done").classList.remove("hidden");
+
+  fetch("http://beta.hsmtb.com/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(session)
+  });
+}
+</script>
+
+</body>
+</html>
