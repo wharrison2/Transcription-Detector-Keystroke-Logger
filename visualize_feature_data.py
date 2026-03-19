@@ -98,3 +98,13 @@ def plot_errors(i1, i2, data, labels, preds, features):
     plt.ylabel(FEATURE_LABELS[features[i2]])
     plt.title(f"{FEATURE_LABELS[features[i2]]} vs {FEATURE_LABELS[features[i1]]}")
     plt.show()
+cur_tasks = []
+cur_labels = []
+for task in tasks:
+    if task.id == "22277dad-983d-4bbc-b31e-0e3218b6e3e4":
+        cur_tasks.append(task)
+        cur_labels.append(1 if task.type == "transcription" else 0)
+
+cur_labels = np.array(cur_labels)
+cur_features = extract_features(cur_tasks)
+

@@ -9,3 +9,6 @@ tf_env/
 Thumbs.db
 
 Figure*
+*.png
+
+*.txt

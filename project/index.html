@@ -73,6 +73,9 @@
 </div>
 
 <script>
+/* ---------- CONFIG ---------- */
+const SUBMIT_URL = "http://localhost:8000/submit"; // placeholder
+
 /* ---------- MOBILE BLOCK ---------- */
 if ("ontouchstart" in window) {
   document.body.innerHTML =
@@ -264,7 +267,7 @@ function finishExperiment() {
   document.getElementById("task").classList.add("hidden");
   document.getElementById("done").classList.remove("hidden");
 
-  fetch("http://beta.hsmtb.com/submit", {
+  fetch(SUBMIT_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(session)
