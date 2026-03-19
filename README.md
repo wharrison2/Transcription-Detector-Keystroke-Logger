@@ -45,7 +45,7 @@ Three classifiers were evaluated:
 - **Neural Network** (TensorFlow)
 - **Gradient Boosting** (XGBoost)
 
-All three achieved similar validation and test accuracy. Deep learning and XGBoost showed overfitting on the current dataset size.
+All three achieved similar validation and test accuracy.
 
 ## Setup
 
